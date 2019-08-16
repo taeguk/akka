@@ -376,6 +376,8 @@ This is described further in @ref:[inspecting sharding state](../cluster-shardin
 
 ### Distributed Data
 
+#### Config for message payload size
+
 Configuration properties for controlling sizes of `Gossip` and `DeltaPropagation` messages in Distributed Data
 have been reduced. Previous defaults sometimes resulted in messages exceeding max payload size for remote
 actor messages.
@@ -386,6 +388,18 @@ The new configuration properties are:
 akka.cluster.distributed-data.max-delta-elements = 500
 akka.cluster.distributed-data.delta-crdt.max-delta-size = 50
 ```
+
+#### DataDeleted
+
+`DataDeleted` has been replaced with new message `UpdateDataDeleted` as a possible response to an `Update`
+request and `GetDataDeleted` as possible response to a `Get` request. Those messages are used when the
+request couldn't be performed because the entry has been deleted.
+
+`DataDeleted` is still a possible response to a `Delete` request.
+
+The reason for this change is that `DataDeleted` didn't extend the `UpdateResponse` and `GetResponse` types
+and could therefore cause problems when `Update` and `Get` were used with `ask`. This was also a problem for
+Akka Typed.
 
 ### CoordinatedShutdown is run from ActorSystem.terminate
 
@@ -497,6 +511,9 @@ made before finalizing the APIs. Compared to Akka 2.5.x the source incompatible 
 * `StashBuffer`s are now created with `Behaviors.withStash` rather than instantiating directly
 * To align with the Akka Typed style guide `SpawnProtocol` is now created through @scala[`SpawnProtocol()`]@java[`SpawnProtocol.create()`], the special `Spawn` message
   factories has been removed and the top level of the actor protocol is now `SpawnProtocol.Command`
+* `GetDataDeleted` and `UpdateDataDeleted` introduced as described in @ref[DataDeleted](#datadeleted).
+* `SubscribeResponse` introduced in `Subscribe` because the responses can be both `Changed` and `Deleted`.
+* `ReplicationDeleteFailure` renamed to `DeleteFailure`.
 
 #### Akka Typed Stream API changes
 

@@ -541,6 +541,11 @@ object Replicator {
       with ReplicatorMessage
 
   /**
+   * The [[Get]] request couldn't be performed because the entry has been deleted.
+   */
+  final case class GetDataDeleted[A <: ReplicatedData](key: Key[A], request: Option[Any]) extends GetResponse[A]
+
+  /**
    * Register a subscriber that will be notified with a [[Changed]] message
    * when the value of the given `key` is changed. Current value is also
    * sent as a [[Changed]] message to a new subscriber.
@@ -564,11 +569,20 @@ object Replicator {
   final case class Unsubscribe[A <: ReplicatedData](key: Key[A], subscriber: ActorRef) extends ReplicatorMessage
 
   /**
+   * @see [[Replicator.Subscribe]]
+   */
+  sealed trait SubscribeResponse[A <: ReplicatedData] extends NoSerializationVerificationNeeded {
+    def key: Key[A]
+  }
+
+  /**
    * The data value is retrieved with [[#get]] using the typed key.
    *
    * @see [[Replicator.Subscribe]]
    */
-  final case class Changed[A <: ReplicatedData](key: Key[A])(data: A) extends ReplicatorMessage {
+  final case class Changed[A <: ReplicatedData](key: Key[A])(data: A)
+      extends SubscribeResponse[A]
+      with ReplicatorMessage {
 
     /**
      * The data value, with correct type.
@@ -585,9 +599,10 @@ object Replicator {
     def dataValue: A = data
   }
 
-  final case class Deleted[A <: ReplicatedData](key: Key[A]) extends NoSerializationVerificationNeeded {
-    override def toString: String = s"Deleted [$key]"
-  }
+  /**
+   * @see [[Replicator.Subscribe]]
+   */
+  final case class Deleted[A <: ReplicatedData](key: Key[A]) extends SubscribeResponse[A]
 
   object Update {
 
@@ -690,6 +705,11 @@ object Replicator {
    * crashes before it has been able to communicate with other replicas.
    */
   final case class UpdateTimeout[A <: ReplicatedData](key: Key[A], request: Option[Any]) extends UpdateFailure[A]
+
+  /**
+   * The [[Update]] couldn't be performed because the entry has been deleted.
+   */
+  final case class UpdateDataDeleted[A <: ReplicatedData](key: Key[A], request: Option[Any]) extends UpdateFailure[A]
 
   /**
    * If the `modify` function of the [[Update]] throws an exception the reply message
@@ -1172,7 +1192,8 @@ object Replicator {
  *
  * A deleted key cannot be reused again, but it is still recommended to delete unused
  * data entries because that reduces the replication overhead when new nodes join the cluster.
- * Subsequent `Delete`, `Update` and `Get` requests will be replied with [[Replicator.DataDeleted]].
+ * Subsequent `Delete`, `Update` and `Get` requests will be replied with [[Replicator.DataDeleted]],
+ * [[Replicator.UpdateDataDeleted]] and [[Replicator.GetDataDeleted]] respectively.
  * Subscribers will receive [[Replicator.Deleted]].
  *
  * In the `Delete` message you can pass an optional request context in the same way as for the
@@ -1518,7 +1539,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     log.debug("Received Get for key [{}]", key)
     if (isLocalGet(consistency)) {
       val reply = localValue match {
-        case Some(DataEnvelope(DeletedData, _, _)) => DataDeleted(key, req)
+        case Some(DataEnvelope(DeletedData, _, _)) => GetDataDeleted(key, req)
         case Some(DataEnvelope(data, _, _))        => GetSuccess(key, req)(data)
         case None                                  => NotFound(key, req)
       }
@@ -1559,7 +1580,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
     Try {
       localValue match {
-        case Some(DataEnvelope(DeletedData, _, _)) => throw new DataDeleted(key, req)
+        case Some(envelope @ DataEnvelope(DeletedData, _, _)) =>
+          (envelope, None)
         case Some(envelope @ DataEnvelope(existing, _, _)) =>
           modify(Some(existing)) match {
             case d: DeltaReplicatedData if deltaCrdtEnabled =>
@@ -1575,6 +1597,9 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
           }
       }
     } match {
+      case Success((DataEnvelope(DeletedData, _, _), _)) =>
+        log.debug("Received Update for deleted key [{}]", key)
+        replyTo ! UpdateDataDeleted(key, req)
       case Success((envelope, delta)) =>
         log.debug("Received Update for key [{}]", key)
 
@@ -1628,9 +1653,6 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
               Some(StoreReply(UpdateSuccess(key, req), StoreFailure(key, req), writeAggregator)))
           }
         }
-      case Failure(e: DataDeleted[_]) =>
-        log.debug("Received Update for deleted key [{}]", key)
-        replyTo ! e
       case Failure(e) =>
         log.debug("Received Update for key [{}], failed: {}", key, e.getMessage)
         replyTo ! ModifyFailure(key, "Update failed: " + e.getMessage, e, req)
@@ -2545,7 +2567,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   def waitReadRepairAck(envelope: Replicator.Internal.DataEnvelope): Receive = {
     case ReadRepairAck =>
       val replyMsg =
-        if (envelope.data == DeletedData) DataDeleted(key, req)
+        if (envelope.data == DeletedData) GetDataDeleted(key, req)
         else GetSuccess(key, req)(envelope.data)
       replyTo.tell(replyMsg, context.parent)
       context.stop(self)

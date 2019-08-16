@@ -144,11 +144,11 @@ class ReplicatorSpec extends MultiNodeSpec(ReplicatorSpec) with STMultiNodeSpec 
         expectMsg(DeleteSuccess(KeyX, Some(777)))
         changedProbe.expectMsg(Deleted(KeyX))
         replicator ! Get(KeyX, ReadLocal, Some(789))
-        expectMsg(DataDeleted(KeyX, Some(789)))
+        expectMsg(GetDataDeleted(KeyX, Some(789)))
         replicator ! Get(KeyX, readAll, Some(456))
-        expectMsg(DataDeleted(KeyX, Some(456)))
+        expectMsg(GetDataDeleted(KeyX, Some(456)))
         replicator ! Update(KeyX, GCounter(), WriteLocal, Some(123))(_ :+ 1)
-        expectMsg(DataDeleted(KeyX, Some(123)))
+        expectMsg(UpdateDataDeleted(KeyX, Some(123)))
         replicator ! Delete(KeyX, WriteLocal, Some(555))
         expectMsg(DataDeleted(KeyX, Some(555)))
 
@@ -309,7 +309,7 @@ class ReplicatorSpec extends MultiNodeSpec(ReplicatorSpec) with STMultiNodeSpec 
           c.value should be(31)
 
           replicator ! Get(KeyY, ReadLocal, Some(777))
-          expectMsg(DataDeleted(KeyY, Some(777)))
+          expectMsg(GetDataDeleted(KeyY, Some(777)))
         }
       }
       changedProbe.expectMsgPF() { case c @ Changed(KeyC) => c.get(KeyC).value } should be(31)
