@@ -50,7 +50,7 @@ object SendQueueSpec {
   }
 }
 
-class SendQueueSpec extends AkkaSpec("akka.actor.serialize-messages = off") with ImplicitSender {
+class SendQueueSpec extends AkkaSpec with ImplicitSender {
   import SendQueueSpec._
 
   val matSettings = ActorMaterializerSettings(system).withFuzzing(true)

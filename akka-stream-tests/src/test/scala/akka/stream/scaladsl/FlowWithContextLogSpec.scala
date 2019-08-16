@@ -12,7 +12,6 @@ import akka.testkit.TestProbe
 
 class FlowWithContextLogSpec extends StreamSpec("""
      akka.loglevel = DEBUG # test verifies logging
-     akka.actor.serialize-messages = off
      """) with ScriptedTest {
 
   implicit val mat: Materializer = ActorMaterializer()

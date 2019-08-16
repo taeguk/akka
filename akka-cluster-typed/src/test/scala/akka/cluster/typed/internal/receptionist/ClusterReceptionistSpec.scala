@@ -30,7 +30,6 @@ object ClusterReceptionistSpec {
       akka.loglevel = DEBUG # issue #24960
       akka.actor {
         provider = cluster
-        serialize-messages = off
         serializers {
           test = "akka.cluster.typed.internal.receptionist.ClusterReceptionistSpec$$PingSerializer"
         }

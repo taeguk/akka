@@ -25,7 +25,6 @@ object ClusterSingletonApiSpec {
   val config = ConfigFactory.parseString(s"""
       akka.actor {
         provider = cluster
-        serialize-messages = off
 
         serializers {
           test = "akka.cluster.typed.ClusterSingletonApiSpec$$PingSerializer"
