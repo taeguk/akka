@@ -38,6 +38,7 @@ import akka.persistence.typed.RecoveryCompleted
 import akka.persistence.typed.SnapshotCompleted
 import akka.persistence.typed.SnapshotFailed
 import akka.persistence.typed.SnapshotMetadata
+import akka.persistence.typed.internal.JournalFailureException
 import akka.persistence.{ SnapshotMetadata => UntypedSnapshotMetadata }
 import akka.persistence.{ SnapshotSelectionCriteria => UntypedSnapshotSelectionCriteria }
 import akka.serialization.jackson.CborSerializable
@@ -507,12 +508,15 @@ class EventSourcedBehaviorSpec extends ScalaTestWithActorTestKit(EventSourcedBeh
     }
 
     "fail after recovery timeout" in {
-      EventFilter.error(start = "Persistence failure when replaying snapshot", occurrences = 1).intercept {
+      EventFilter[JournalFailureException](
+        start = "Supervisor StopSupervisor saw failure: Exception during recovery from snapshot",
+        occurrences = 1).intercept {
         val c = spawn(
-          Behaviors.setup[Command](ctx =>
-            counter(ctx, nextPid)
-              .withSnapshotPluginId("slow-snapshot-store")
-              .withJournalPluginId("short-recovery-timeout")))
+          Behaviors.setup[Command](
+            ctx =>
+              counter(ctx, nextPid)
+                .withSnapshotPluginId("slow-snapshot-store")
+                .withJournalPluginId("short-recovery-timeout")))
 
         val probe = TestProbe[State]
 
