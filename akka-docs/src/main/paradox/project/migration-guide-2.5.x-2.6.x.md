@@ -391,11 +391,10 @@ akka.cluster.distributed-data.delta-crdt.max-delta-size = 50
 
 #### DataDeleted
 
-`DataDeleted` has been replaced with new message `UpdateDataDeleted` as a possible response to an `Update`
-request and `GetDataDeleted` as possible response to a `Get` request. Those messages are used when the
-request couldn't be performed because the entry has been deleted.
-
-`DataDeleted` is still a possible response to a `Delete` request.
+`DataDeleted` has been changed in its usage. While it is still a possible response to a Delete request,
+it is no longer the response when an `Update` or `Get` request couldn't be performed because the entry has been deleted.
+In its place are two new possible responses to a request, `UpdateDataDeleted` for an `Update` and `GetDataDeleted`
+for a `Get`.
 
 The reason for this change is that `DataDeleted` didn't extend the `UpdateResponse` and `GetResponse` types
 and could therefore cause problems when `Update` and `Get` were used with `ask`. This was also a problem for

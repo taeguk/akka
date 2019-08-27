@@ -709,7 +709,7 @@ object Replicator {
   /**
    * The [[Update]] couldn't be performed because the entry has been deleted.
    */
-  final case class UpdateDataDeleted[A <: ReplicatedData](key: Key[A], request: Option[Any]) extends UpdateFailure[A]
+  final case class UpdateDataDeleted[A <: ReplicatedData](key: Key[A], request: Option[Any]) extends UpdateResponse[A]
 
   /**
    * If the `modify` function of the [[Update]] throws an exception the reply message
@@ -1536,7 +1536,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
   def receiveGet(key: KeyR, consistency: ReadConsistency, req: Option[Any]): Unit = {
     val localValue = getData(key.id)
-    log.debug("Received Get for key [{}]", key)
+    log.debug("Received Get for key [{}].", key)
     if (isLocalGet(consistency)) {
       val reply = localValue match {
         case Some(DataEnvelope(DeletedData, _, _)) => GetDataDeleted(key, req)
@@ -1598,10 +1598,10 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       }
     } match {
       case Success((DataEnvelope(DeletedData, _, _), _)) =>
-        log.debug("Received Update for deleted key [{}]", key)
+        log.debug("Received Update for deleted key [{}].", key)
         replyTo ! UpdateDataDeleted(key, req)
       case Success((envelope, delta)) =>
-        log.debug("Received Update for key [{}]", key)
+        log.debug("Received Update for key [{}].", key)
 
         // handle the delta
         delta match {
@@ -1881,7 +1881,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         val isDebugEnabled = log.isDebugEnabled
         if (isDebugEnabled)
           log.debug(
-            "Received DeltaPropagation from [{}], containing [{}]",
+            "Received DeltaPropagation from [{}], containing [{}].",
             fromNode.address,
             deltas.collect { case (key, Delta(_, fromSeqNr, toSeqNr)) => s"$key $fromSeqNr-$toSeqNr" }.mkString(", "))
 
@@ -1982,7 +1982,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   def receiveStatus(otherDigests: Map[KeyId, Digest], chunk: Int, totChunks: Int, fromSystemUid: Option[Long]): Unit = {
     if (log.isDebugEnabled)
       log.debug(
-        "Received gossip status from [{}], chunk [{}] of [{}] containing [{}]",
+        "Received gossip status from [{}], chunk [{}] of [{}] containing [{}].",
         replyTo.path.address,
         (chunk + 1),
         totChunks,
@@ -2030,7 +2030,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
   def receiveGossip(updatedData: Map[KeyId, DataEnvelope], sendBack: Boolean, fromSystemUid: Option[Long]): Unit = {
     if (log.isDebugEnabled)
-      log.debug("Received gossip from [{}], containing [{}]", replyTo.path.address, updatedData.keys.mkString(", "))
+      log.debug("Received gossip from [{}], containing [{}].", replyTo.path.address, updatedData.keys.mkString(", "))
     var replyData = Map.empty[KeyId, DataEnvelope]
     updatedData.foreach {
       case (key, envelope) =>
