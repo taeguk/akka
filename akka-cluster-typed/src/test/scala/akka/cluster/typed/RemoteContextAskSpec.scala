@@ -16,10 +16,11 @@ import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.scaladsl.adapter._
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
+
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import org.scalatest.WordSpecLike
 
 class RemoteContextAskSpecSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
@@ -83,7 +84,10 @@ object RemoteContextAskSpec {
 
 }
 
-class RemoteContextAskSpec extends ScalaTestWithActorTestKit(RemoteContextAskSpec.config) with WordSpecLike {
+class RemoteContextAskSpec
+    extends ScalaTestWithActorTestKit(RemoteContextAskSpec.config)
+    with WordSpecLike
+    with LogCapturing {
 
   import RemoteContextAskSpec._
 
@@ -111,7 +115,7 @@ class RemoteContextAskSpec extends ScalaTestWithActorTestKit(RemoteContextAskSpe
       spawn(Behaviors.setup[AnyRef] { ctx =>
         implicit val timeout: Timeout = 3.seconds
 
-        ctx.ask(remoteRef)(Ping) {
+        ctx.ask(remoteRef, Ping) {
           case Success(pong) => pong
           case Failure(ex)   => ex
         }

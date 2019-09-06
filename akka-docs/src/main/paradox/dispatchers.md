@@ -1,15 +1,9 @@
 # Classic Dispatchers
 
-@@@ note
+@@include[includes.md](includes.md) { #actor-api }
+For the new API see @ref:[Dispatchers](typed/dispatchers.md).
 
-Akka Classic is the original Actor APIs, which have been improved by more type safe and guided Actor APIs, 
-known as Akka Typed. Akka Classic is still fully supported and existing applications can continue to use 
-the classic APIs. It is also possible to use Akka Typed together with classic actors within the same 
-ActorSystem, see @ref[coexistence](typed/coexisting.md). For new projects we recommend using the new Actor APIs.
-
-For the new API see @ref[dispatchers](typed/dispatchers.md).
-
-@@@
+For more details on advanced dispatcher config and options, see @ref[Dispatchers](typed/dispatchers.md).
 
 ## Dependency
 
@@ -21,13 +15,16 @@ Dispatchers are part of core Akka, which means that they are part of the akka-ac
   version="$akka.version$"
 }
 
-## Introduction
+<a id="dispatcher-lookup"></a>
+## Looking up a Dispatcher
 
-An Akka `MessageDispatcher` is what makes Akka Actors "tick", it is the engine of the machine so to speak.
-All `MessageDispatcher` implementations are also an `ExecutionContext`, which means that they can be used
-to execute arbitrary code.
+Dispatchers implement the @scala[`ExecutionContext`]@java[`Executor`] interface and can thus be used to run @scala[`Future`]@java[`CompletableFuture`] invocations etc.
 
-For full details on how to work with dispatchers see the @ref:[main dispatcher docs](typed/dispatchers.md#types-of-dispatchers).
+Scala
+:  @@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) { #lookup }
+
+Java
+:  @@snip [DispatcherDocTest.java](/akka-docs/src/test/java/jdocs/dispatcher/DispatcherDocTest.java) { #lookup }
 
 ## Setting the dispatcher for an Actor
 
@@ -58,7 +55,7 @@ You can read more about it in the JDK's [ThreadPoolExecutor documentation](https
 
 @@@
 
-For more options, see the default-dispatcher section of the @ref:[configuration](general/configuration.md).
+For more options, see @ref[Dispatchers](typed/dispatchers.md) and the `default-dispatcher` section of the @ref:[configuration](general/configuration.md).
 
 Then you create the actor as usual and define the dispatcher in the deployment configuration.
 
@@ -90,50 +87,3 @@ where you'd use periods to denote sub-sections, like this: `"foo.bar.my-dispatch
 
 @@@
 
-### More dispatcher configuration examples
-
-Configuring a dispatcher with fixed thread pool size, e.g. for actors that perform blocking IO:
-
-@@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) { #fixed-pool-size-dispatcher-config }
-
-And then using it:
-
-Scala
-:  @@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) { #defining-fixed-pool-size-dispatcher }
-
-Java
-:  @@snip [DispatcherDocTest.java](/akka-docs/src/test/java/jdocs/dispatcher/DispatcherDocTest.java) { #defining-fixed-pool-size-dispatcher }
-
-Another example that uses the thread pool based on the number of cores (e.g. for CPU bound tasks)
-
-<!--same config text for Scala & Java-->
-@@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) {#my-thread-pool-dispatcher-config }
-
-A different kind of dispatcher that uses an affinity pool may increase throughput in cases where there is relatively small
-number of actors that maintain some internal state. The affinity pool tries its best to ensure that an actor is always
-scheduled to run on the same thread. This actor to thread pinning aims to decrease CPU cache misses which can result 
-in significant throughput improvement.
-
-@@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) { #affinity-pool-dispatcher-config }
-
-Configuring a `PinnedDispatcher`:
-
-<!--same config text for Scala & Java-->
-@@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) {#my-pinned-dispatcher-config }
-
-And then using it:
-
-Scala
-:  @@snip [DispatcherDocSpec.scala](/akka-docs/src/test/scala/docs/dispatcher/DispatcherDocSpec.scala) { #defining-pinned-dispatcher }
-
-Java
-:  @@snip [DispatcherDocTest.java](/akka-docs/src/test/java/jdocs/dispatcher/DispatcherDocTest.java) { #defining-pinned-dispatcher }
-
-Note that `thread-pool-executor` configuration as per the above `my-thread-pool-dispatcher` example is
-NOT applicable. This is because every actor will have its own thread pool when using `PinnedDispatcher`,
-and that pool will have only one thread.
-
-Note that it's not guaranteed that the *same* thread is used over time, since the core pool timeout
-is used for `PinnedDispatcher` to keep resource usage down in case of idle actors. To use the same
-thread all the time you need to add `thread-pool-executor.allow-core-timeout=off` to the
-configuration of the `PinnedDispatcher`.

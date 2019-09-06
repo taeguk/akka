@@ -21,6 +21,7 @@ import org.scalatest.{ Matchers, WordSpec }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.cluster.typed.Down
 import akka.cluster.typed.JoinSeedNodes
 import akka.cluster.typed.Leave
@@ -99,7 +100,7 @@ object ClusterReceptionistSpec {
   val PingKey = ServiceKey[PingProtocol]("pingy")
 }
 
-class ClusterReceptionistSpec extends WordSpec with Matchers {
+class ClusterReceptionistSpec extends WordSpec with Matchers with LogCapturing {
 
   import ClusterReceptionistSpec._
   import Receptionist._
@@ -240,7 +241,7 @@ class ClusterReceptionistSpec extends WordSpec with Matchers {
 
         regProbe2.expectMessageType[Listing].serviceInstances(PingKey).size should ===(2)
 
-        akka.cluster.Cluster(system1.toUntyped).shutdown()
+        akka.cluster.Cluster(system1.toClassic).shutdown()
 
         regProbe2.expectNoMessage(3.seconds)
 
@@ -592,7 +593,7 @@ class ClusterReceptionistSpec extends WordSpec with Matchers {
     "not conflict with the ClusterClient receptionist default name" in {
       val testKit = ActorTestKit(s"ClusterReceptionistSpec-test-9", ClusterReceptionistSpec.config)
       try {
-        testKit.system.systemActorOf(Behaviors.ignore, "receptionist")(3.seconds)
+        testKit.system.systemActorOf(Behaviors.ignore, "receptionist")
       } finally {
         testKit.shutdownTestKit()
       }

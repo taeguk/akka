@@ -15,7 +15,7 @@ object Dependencies {
   lazy val java8CompatVersion = settingKey[String]("The version of scala-java8-compat to use.")
 
   val junitVersion = "4.12"
-  val slf4jVersion = "1.7.25"
+  val slf4jVersion = "1.7.27"
   // check agrona version when updating this
   val aeronVersion = "1.19.1"
   // needs to be inline with the aeron version
@@ -26,6 +26,8 @@ object Dependencies {
 
   val scala212Version = "2.12.9"
   val scala213Version = "2.13.0"
+
+  val reactiveStreamsVersion = "1.0.3"
 
   val sslConfigVersion = "0.3.8"
 
@@ -51,7 +53,7 @@ object Dependencies {
   object Compile {
     // Compile
 
-    val config = "com.typesafe" % "config" % "1.3.4" // ApacheV2
+    val config = "com.typesafe" % "config" % "1.3.5-RC1" // ApacheV2
     val netty = "io.netty" % "netty" % nettyVersion // ApacheV2
 
     val scalaReflect = ScalaVersionDependentModuleID.versioned("org.scala-lang" % "scala-reflect" % _) // Scala License
@@ -67,7 +69,7 @@ object Dependencies {
     val jctools = "org.jctools" % "jctools-core" % "2.1.2" // ApacheV2
 
     // reactive streams
-    val reactiveStreams = "org.reactivestreams" % "reactive-streams" % "1.0.2" // CC0
+    val reactiveStreams = "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion // CC0
 
     // ssl-config
     val sslConfigCore = Def.setting { "com.typesafe" %% "ssl-config-core" % sslConfigVersion } // ApacheV2
@@ -95,6 +97,8 @@ object Dependencies {
 
     val protobufRuntime = "com.google.protobuf" % "protobuf-java" % "3.9.0"
 
+    val logback = "ch.qos.logback" % "logback-classic" % "1.2.3" // EPL 1.0
+
     object Docs {
       val sprayJson = "io.spray" %% "spray-json" % "1.3.5" % "test"
       val gson = "com.google.code.gson" % "gson" % "2.8.5" % "test"
@@ -105,7 +109,7 @@ object Dependencies {
       val commonsIo = "commons-io" % "commons-io" % "2.6" % "test" // ApacheV2
       val commonsCodec = "commons-codec" % "commons-codec" % "1.11" % "test" // ApacheV2
       val junit = "junit" % "junit" % junitVersion % "test" // Common Public License 1.0
-      val logback = "ch.qos.logback" % "logback-classic" % "1.2.3" % "test" // EPL 1.0 / LGPL 2.1
+      val logback = Compile.logback % "test" // EPL 1.0
       val mockito = "org.mockito" % "mockito-core" % "2.19.1" % "test" // MIT
       // changing the scalatest dependency must be reflected in akka-docs/rst/dev/multi-jvm-testing.rst
       val scalatest = Def.setting { "org.scalatest" %% "scalatest" % scalaTestVersion.value % "test" } // ApacheV2
@@ -132,7 +136,7 @@ object Dependencies {
       val slf4jLog4j = "org.slf4j" % "log4j-over-slf4j" % slf4jVersion % "test" // MIT
 
       // reactive streams tck
-      val reactiveStreamsTck = "org.reactivestreams" % "reactive-streams-tck" % "1.0.3-RC1" % "test" // CC0
+      val reactiveStreamsTck = "org.reactivestreams" % "reactive-streams-tck" % reactiveStreamsVersion % "test" // CC0
 
       val protobufRuntime = "com.google.protobuf" % "protobuf-java" % "3.9.0" % "test"
     }
@@ -152,6 +156,8 @@ object Dependencies {
 
       val scalatest = Def.setting { "org.scalatest" %% "scalatest" % scalaTestVersion.value % "optional;provided;test" } // ApacheV2
 
+      val logback = Compile.logback % "optional;provided;test" // EPL 1.0
+
     }
 
   }
@@ -161,6 +167,8 @@ object Dependencies {
   val l = libraryDependencies
 
   val actor = l ++= Seq(config, java8Compat.value)
+
+  val actorTyped = l ++= Seq(slf4jApi)
 
   val discovery = l ++= Seq(Test.junit, Test.scalatest.value)
 
@@ -173,14 +181,13 @@ object Dependencies {
         Test.scalatest.value,
         Test.commonsCodec,
         Test.commonsMath,
-        Test.mockito,
         Test.scalacheck.value,
         Test.jimfs,
         Test.dockerClient,
         Provided.activation // dockerClient needs javax.activation.DataSource in JDK 11+
       )
 
-  val actorTestkitTyped = l ++= Seq(Provided.junit, Provided.scalatest.value)
+  val actorTestkitTyped = l ++= Seq(Provided.logback, Provided.junit, Provided.scalatest.value)
 
   val remoteDependencies = Seq(netty, aeronDriver, aeronClient)
   val remoteOptionalDependencies = remoteDependencies.map(_ % "optional")
@@ -200,7 +207,8 @@ object Dependencies {
         Provided.levelDBNative,
         Test.junit,
         Test.scalatest.value,
-        Test.commonsIo)
+        Test.commonsIo,
+        Test.mockito)
 
   val clusterMetrics = l ++= Seq(Provided.sigarLoader, Test.slf4jJul, Test.slf4jLog4j, Test.logback, Test.mockito)
 

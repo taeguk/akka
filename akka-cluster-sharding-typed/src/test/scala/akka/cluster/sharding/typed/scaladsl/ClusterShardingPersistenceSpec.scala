@@ -12,9 +12,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
+
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.testkit.typed.scaladsl.TestProbe
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.PostStop
@@ -24,7 +26,7 @@ import akka.cluster.sharding.ShardRegion.CurrentShardRegionState
 import akka.cluster.sharding.ShardRegion.GetShardRegionState
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding.Passivate
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding.ShardCommand
-import akka.cluster.sharding.{ ClusterSharding => UntypedClusterSharding }
+import akka.cluster.sharding.{ ClusterSharding => ClassicClusterSharding }
 import akka.cluster.typed.Cluster
 import akka.cluster.typed.Join
 import akka.persistence.typed.ExpectingReply
@@ -147,7 +149,8 @@ object ClusterShardingPersistenceSpec {
 
 class ClusterShardingPersistenceSpec
     extends ScalaTestWithActorTestKit(ClusterShardingPersistenceSpec.config)
-    with WordSpecLike {
+    with WordSpecLike
+    with LogCapturing {
   import ClusterShardingPersistenceSpec._
 
   private var _entityId = 0
@@ -164,9 +167,9 @@ class ClusterShardingPersistenceSpec
     // FIXME #24466: rewrite this with Typed API when region queries are supported
     import akka.actor.typed.scaladsl.adapter._
     val regionStateProbe = TestProbe[CurrentShardRegionState]()
-    val untypedRegion = UntypedClusterSharding(system.toUntyped)
+    val classicRegion = ClassicClusterSharding(system.toClassic)
     regionStateProbe.awaitAssert {
-      untypedRegion.shardRegion(typeKey.name).tell(GetShardRegionState, regionStateProbe.ref.toUntyped)
+      classicRegion.shardRegion(typeKey.name).tell(GetShardRegionState, regionStateProbe.ref.toClassic)
       regionStateProbe.receiveMessage().shards.foreach { shardState =>
         shardState.entityIds should not contain entityId
       }

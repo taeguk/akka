@@ -8,6 +8,7 @@ import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.typed.{ ActorRef, Behavior }
 import akka.persistence.typed.scaladsl.{ Effect, EventSourcedBehavior }
 import akka.actor.testkit.typed.scaladsl.TestProbe
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.persistence.typed.PersistenceId
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpecLike
@@ -52,18 +53,19 @@ object ClusterSingletonPersistenceSpec {
 
 class ClusterSingletonPersistenceSpec
     extends ScalaTestWithActorTestKit(ClusterSingletonPersistenceSpec.config)
-    with WordSpecLike {
+    with WordSpecLike
+    with LogCapturing {
   import ClusterSingletonPersistenceSpec._
   import akka.actor.typed.scaladsl.adapter._
 
   implicit val s = system
 
-  implicit val untypedSystem = system.toUntyped
-  private val untypedCluster = akka.cluster.Cluster(untypedSystem)
+  implicit val classicSystem = system.toClassic
+  private val classicCluster = akka.cluster.Cluster(classicSystem)
 
   "A typed cluster singleton with persistent actor" must {
 
-    untypedCluster.join(untypedCluster.selfAddress)
+    classicCluster.join(classicCluster.selfAddress)
 
     "start persistent actor" in {
       val ref = ClusterSingleton(system).init(SingletonActor(persistentActor, "singleton").withStopMessage(StopPlz))

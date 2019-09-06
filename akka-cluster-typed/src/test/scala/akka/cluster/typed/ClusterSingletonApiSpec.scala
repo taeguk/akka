@@ -14,10 +14,11 @@ import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.{ ActorRef, ActorRefResolver }
 import akka.serialization.SerializerWithStringManifest
 import com.typesafe.config.ConfigFactory
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
+
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import org.scalatest.WordSpecLike
 
 object ClusterSingletonApiSpec {
@@ -85,12 +86,15 @@ object ClusterSingletonApiSpec {
   }
 }
 
-class ClusterSingletonApiSpec extends ScalaTestWithActorTestKit(ClusterSingletonApiSpec.config) with WordSpecLike {
+class ClusterSingletonApiSpec
+    extends ScalaTestWithActorTestKit(ClusterSingletonApiSpec.config)
+    with WordSpecLike
+    with LogCapturing {
   import ClusterSingletonApiSpec._
 
   implicit val testSettings = TestKitSettings(system)
   val clusterNode1 = Cluster(system)
-  val untypedSystem1 = system.toUntyped
+  val classicSystem1 = system.toClassic
 
   val system2 = akka.actor.ActorSystem(
     system.name,

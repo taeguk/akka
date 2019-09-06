@@ -6,7 +6,9 @@ package akka.stream.scaladsl
 
 import akka.NotUsed
 import akka.stream.testkit.StreamSpec
+import com.github.ghik.silencer.silent
 
+@silent("deprecated")
 class SetupSpec extends StreamSpec {
 
   import system.dispatcher

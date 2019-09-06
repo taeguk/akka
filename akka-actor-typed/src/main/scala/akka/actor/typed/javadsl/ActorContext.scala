@@ -8,9 +8,12 @@ import java.time.Duration
 import java.util.function.{ BiFunction, Function => JFunction }
 
 import akka.annotation.DoNotInherit
+import akka.actor.ClassicActorContextProvider
 import akka.actor.typed._
 import java.util.Optional
 import java.util.concurrent.CompletionStage
+
+import org.slf4j.Logger
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -35,7 +38,7 @@ import scala.concurrent.ExecutionContextExecutor
  * Not for user extension.
  */
 @DoNotInherit
-trait ActorContext[T] extends TypedActorContext[T] {
+trait ActorContext[T] extends TypedActorContext[T] with ClassicActorContextProvider {
   // this must be a pure interface, i.e. only abstract methods
 
   /**
@@ -65,7 +68,11 @@ trait ActorContext[T] extends TypedActorContext[T] {
   def getSystem: ActorSystem[Void]
 
   /**
-   * An actor specific logger
+   * An actor specific logger.
+   *
+   * The logger name will be an estimated source class for the actor which is calculated when the
+   * logger is first used (the logger is lazily created upon first use). If this yields the wrong
+   * class or another class is preferred this can be changed with `setLoggerName`.
    *
    * *Warning*: This method is not thread-safe and must not be accessed from threads other
    * than the ordinary actor message processing thread, such as [[java.util.concurrent.CompletionStage]] callbacks.
@@ -74,12 +81,21 @@ trait ActorContext[T] extends TypedActorContext[T] {
 
   /**
    * Replace the current logger (or initialize a new logger if the logger was not touched before) with one that
-   * has ghe given class as logging class. Logger source will be actor path.
+   * has ghe given name as logger name. Logger source MDC entry "akkaSource" will be the actor path.
    *
    * *Warning*: This method is not thread-safe and must not be accessed from threads other
    * than the ordinary actor message processing thread, such as [[java.util.concurrent.CompletionStage]] callbacks.
    */
-  def setLoggerClass(clazz: Class[_]): Unit
+  def setLoggerName(name: String): Unit
+
+  /**
+   * Replace the current logger (or initialize a new logger if the logger was not touched before) with one that
+   * has ghe given class name as logger name. Logger source MDC entry "akkaSource" will be the actor path.
+   *
+   * *Warning*: This method is not thread-safe and must not be accessed from threads other
+   * than the ordinary actor message processing thread, such as [[java.util.concurrent.CompletionStage]] callbacks.
+   */
+  def setLoggerName(clazz: Class[_]): Unit
 
   /**
    * The list of child Actors created by this Actor during its lifetime that
@@ -269,7 +285,7 @@ trait ActorContext[T] extends TypedActorContext[T] {
    *                      the other actor can send a message back through.
    * @param applyToResponse Transforms the response from the `target` into a message this actor understands.
    *                        Will be invoked with either the response message or an AskTimeoutException failed or
-   *                        potentially another exception if the remote actor is untyped and sent a
+   *                        potentially another exception if the remote actor is classic and sent a
    *                        [[akka.actor.Status.Failure]] as response. The returned message of type `T` is then
    *                        fed into this actor as a message. Should be a pure function but is executed inside
    *                        the actor when the response arrives so can safely touch the actor internals. If this
